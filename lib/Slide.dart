@@ -18,13 +18,20 @@ class SlideConfig {
   /** Iff true slide numbers are show in presentation */
   bool mShowSlideNum;
   /** Offset of slide compared to the last slide.
-      offset-x == 1 means the next slide begins where the
-      last one ends. offset-y == 1 means the next slide is
-      above the previous. offset-z == 0 means the next slide
-      lies on the same z-plane as the previous slide.*/
+   *  offset-x == 1 means the next slide begins where the
+   *  last one ends. offset-y == 1 means the next slide is
+   *  above the previous. offset-z == 0 means the next slide
+   *  lies on the same z-plane as the previous slide.
+   */
   double mOffsetX;
   double mOffsetY;
   double mOffsetZ;
+
+  /**
+  * Control the animation out of the slide and into the
+  * slide when stepping back from the next slide.
+  */
+  String mOutTrans;
   
   /**
   * Public Constructor
@@ -34,20 +41,24 @@ class SlideConfig {
     copyFrom(defaultCfg);
   
     // Override custom config
-    if (e.attributes[Common.SHOW_SLIDE_NUM] != null) {
-      mShowSlideNum = (e.attributes[Common.SHOW_SLIDE_NUM] == Common.TRUE);
+    if (e.attributes[Common.SO_SHOW_SLIDE_NUM] != null) {
+      mShowSlideNum = (e.attributes[Common.SO_SHOW_SLIDE_NUM] == Common.TRUE);
     }
     
-    if (e.attributes[Common.OFFSET_X] != null) {
-      mOffsetX = Math.parseDouble(e.attributes[Common.OFFSET_X]);
+    if (e.attributes[Common.SO_OFFSET_X] != null) {
+      mOffsetX = Math.parseDouble(e.attributes[Common.SO_OFFSET_X]);
     }
 
-    if (e.attributes[Common.OFFSET_Y] != null) {
-      mOffsetY = Math.parseDouble(e.attributes[Common.OFFSET_Y]);
+    if (e.attributes[Common.SO_OFFSET_Y] != null) {
+      mOffsetY = Math.parseDouble(e.attributes[Common.SO_OFFSET_Y]);
     }
 
-    if (e.attributes[Common.OFFSET_Z] != null) {
-      mOffsetZ = Math.parseDouble(e.attributes[Common.OFFSET_Z]);
+    if (e.attributes[Common.SO_OFFSET_Z] != null) {
+      mOffsetZ = Math.parseDouble(e.attributes[Common.SO_OFFSET_Z]);
+    }
+    
+    if (e.attributes[Common.SO_OUT_ANI] != null) {
+      mOutTrans = e.attributes[Common.SO_OUT_ANI];
     }
   }
 
@@ -61,9 +72,10 @@ class SlideConfig {
       mOffsetX = cfg.mOffsetX;
       mOffsetY = cfg.mOffsetY;
       mOffsetZ = cfg.mOffsetZ;
+      mOutTrans = cfg.mOutTrans;
     }
   }
-  
+
   /**
   * Make position relative to position describe in cfg
   */
@@ -82,19 +94,19 @@ class SlideConfig {
 class SlideContainer {  
   /** Singleton */
   static SlideContainer _inst;
-  
+
   /** HTML elements */
   Element mBeamer;
   Element mCanvas;
-  
+
   /** Default configuration */
   final SlideConfig _defCfg;
   /** All slides */
   List<Slide> mSlides;
-  
+
   /** Slide control */
   int mActiveSlide;
-  
+
   /**
   * Create a singleton
   */
@@ -105,7 +117,7 @@ class SlideContainer {
     }
     return _inst;
   }
-  
+
   /**
   * Private constructor
   */
@@ -124,9 +136,10 @@ class SlideContainer {
 
     // Setup addition properties of default slide configuration
     _defCfg.mShowSlideNum = false;
-    _defCfg.mOffsetX = 1;
-    _defCfg.mOffsetY = 0;
-    _defCfg.mOffsetZ = 0;
+    _defCfg.mOffsetX = 1.0;
+    _defCfg.mOffsetY = 0.0;
+    _defCfg.mOffsetZ = 0.0;
+    _defCfg.mOutTrans = "";
     
     // Create slides
     genSlides(mCanvas.queryAll(".${Common.CLS_SLIDE}"));
@@ -134,7 +147,7 @@ class SlideContainer {
     
     Common.getLogger().debug(MSGs.SLIDECONTAINER_CREATED);
   }
-  
+
   /**
   * Create slides from HTML description
   */
@@ -145,8 +158,8 @@ class SlideContainer {
       SlideConfig cfg = new SlideConfig(e,_defCfg);
       if (mSlides.length == 0) {
         // Make sure first slide is visible
-        cfg.mOffsetX = 0;
-        cfg.mOffsetY = 0;
+        cfg.mOffsetX = 0.0;
+        cfg.mOffsetY = 0.0;
       }
       else {
         // Move according to position of the last slide
@@ -156,7 +169,7 @@ class SlideContainer {
       mSlides.addLast(new Slide(e,cfg,mSlides.length));
     });
   }
-  
+
   /**
   * Generates HTML for slides
   */
@@ -167,48 +180,60 @@ class SlideContainer {
       s.render();
     });
   }
-  
+
+  /**
+  * Show previous step in active slide or go
+  * back to the last step in the previous slide
+  */
+  void prevStep() {
+    Slide as = mSlides[mActiveSlide];
+    if (!as.prevStep()) {
+      prev();
+    }
+  }
+
+  /**
+  * Show next step in active slide or go to
+  * the first step in the next slide
+  */
+  void nextStep() {
+    Slide as = mSlides[mActiveSlide];
+    if (!as.nextStep()) {
+      next();
+    }
+  }
+
   /**
   * Show previous slide
   */
   void prev() {
+    Slide from = mSlides[mActiveSlide];
     mActiveSlide = (mActiveSlide-1 + mSlides.length) % mSlides.length;
-    Slide as = mSlides[mActiveSlide];
-    moveTo(as);
+    Slide to = mSlides[mActiveSlide];
+    to.prepareLastStep();
+    moveTo(to,to.getTransition());
   }
-  
+
   /**
   * Show next slide
   */
   void next() {
+    Slide from = mSlides[mActiveSlide];
     mActiveSlide = (mActiveSlide+1) % mSlides.length;
-    Slide as = mSlides[mActiveSlide];
-    moveTo(as);
+    Slide to = mSlides[mActiveSlide];
+    to.prepareFirstStep();
+    moveTo(to,from.getTransition());
   }
-  
-  void moveTo(Slide as)
+
+  void moveTo(Slide to, String trans)
   {
-    mCanvas.style.cssText = BeamerCSS.basicLayout()
+    mCanvas.style.cssText = BeamerCSS.basicLayout()       
+                          + BeamerCSS.transition(trans)
                           + BeamerCSS.transformStyle()
                           + BeamerCSS.transformOrigin(0, 0)
-                          + BeamerCSS.translate(-as.getX(), -as.getY(), -as.getZ());
+                          + BeamerCSS.translate(-to.getX(), -to.getY(), -to.getZ());
     Common.getLogger().debug(mCanvas.style.cssText);
   }
-  
-  /**
-  * Show previous step in active slide
-  */
-  void prevStep() {
-    
-  }
-  
-  /**
-  * Show next step in active slide
-  */
-  void nextStep() {
-    
-  } 
-  
 }
 
 /**
@@ -234,13 +259,46 @@ class Slide {
   double getX() => document.window.innerWidth*mCfg.mOffsetX;
   double getY() => document.window.innerHeight*mCfg.mOffsetY;
   double getZ() => mCfg.mOffsetZ;
+  String getTransition() => mCfg.mOutTrans;
+  
+  /**
+  * Go to first step of the slide
+  */
+  void prepareFirstStep() {
+
+  }
+
+  /**
+  * Go to last step of the slide
+  */
+  void prepareLastStep() {
+
+  }
+  
+  /**
+  * Go to previous step on the slide
+  * and return true. Return false
+  * if the first step has been reached.
+  */
+  bool prevStep() {
+    return false;
+  }
+  
+  /**
+  * Go to next step on the slide
+  * and return true. Return false
+  * if the last step has been reached.
+  */
+  bool nextStep() {
+    return false;
+  }
   
   /**
   * Generate HTML for slide
   */
   void render() {
-    double h = document.window.innerHeight;
-    double w = document.window.innerWidth;
+    int h = document.window.innerHeight;
+    int w = document.window.innerWidth;
     
     mElt.style.cssText = BeamerCSS.basicLayout() + "height: ${h}px; width: ${w}px;"
                        + BeamerCSS.transformOrigin(0,0)

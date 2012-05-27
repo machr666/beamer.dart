@@ -45,20 +45,18 @@ class Control {
   void keyHandler(UIEvent evt) {
     switch (evt.keyCode) {
       case 37: // left
-        mSlides.prev();
+        mSlides.prevStep();
         break;
       case 39: // right
-        mSlides.next();
+        mSlides.nextStep();
         break;
       case 38: // up
         break;
       case 40: // down
         break;
       case 9:  // tab
-        mSlides.prevStep();
         break;
       case 32: // space
-        mSlides.nextStep();
         break;
     }
     evt.preventDefault();

@@ -6,8 +6,6 @@
 // 3rd party libs
 #import("../3rd-party/log4dart/Lib.dart");
 
-Logger logger = LoggerFactory.getLogger("BeamerLogger");
-
 class Common {
   
   static Logger getLogger() => LoggerFactory.getLogger("BeamerLogger");
@@ -28,9 +26,9 @@ class Common {
   static final String CLS_SLIDE = "slide";
   
   /** Slide Options*/
-  static final String SHOW_SLIDE_NUM = "show-slide-num";
-  static final String OFFSET_X = "offset-x";
-  static final String OFFSET_Y = "offset-y";
-  static final String OFFSET_Z = "offset-z";
-  
+  static final String SO_SHOW_SLIDE_NUM = "show-slide-num";
+  static final String SO_OFFSET_X = "offset-x";
+  static final String SO_OFFSET_Y = "offset-y";
+  static final String SO_OFFSET_Z = "offset-z";
+  static final String SO_OUT_ANI = "out-animation";
 }

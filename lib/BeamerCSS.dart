@@ -25,10 +25,18 @@ class BeamerCSS {
     return "position: absolute; top: 0px; left: 0px;";
   }
 
+  /** Browser independent CSS3 transition */
+  static String transition(String trans) {
+    String css = "";
+    if (trans == "") return css;
+    getBrowsers().forEach((String s) => css += "${s}-transition: ${trans};");
+    return css;
+  }
+  
   /** Browser independent CSS3 transform-origin */
   static String transformOrigin(num xRel, num yRel) {
     String css = "";
-    getBrowsers().forEach((String s) => css += "${s}-transform-origin ${xRel}% ${yRel}%;");
+    getBrowsers().forEach((String s) => css += "${s}-transform-origin: ${xRel}% ${yRel}%;");
     return css;
   }
   

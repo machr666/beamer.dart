@@ -1,4 +1,20 @@
 body {
 	overflow: hidden;
 	background-color: white;
-};
+}
+
+.SlideHeader {
+	position: absolute;
+	display: table;
+	width: 100%;
+	height: 10%;
+	background-color: #EDDD1A;
+}
+
+.SlideTitle {
+	position: relative;
+	display: table-cell;
+	vertical-align: middle;
+	padding-left: 5%;
+	font-size: 200%;
+}

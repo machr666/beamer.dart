@@ -177,7 +177,7 @@ class SlideContainer {
   {
     if (mSlides == null) return;
     mSlides.forEach((Slide s) {
-      s.render();
+      s.resize();
     });
   }
 
@@ -242,18 +242,24 @@ class SlideContainer {
 class Slide { 
   /** Element describing the slide */
   Element mElt;
-
+  
   /** Configuration of the slide */
   SlideConfig mCfg;
 
   /** The number of the slide */
   int mSlideNum;
   
+  /** Slide title */
+  String mTitle;
+  
   /**
   * Public Constructor
   */
   Slide(this.mElt, this.mCfg, this.mSlideNum) {
     Common.getLogger().debug("${MSGs.SLIDE_CREATED} #${mSlideNum}");
+    
+    // Get title
+    mTitle = (mElt.attributes[Common.SO_TITLE]==null) ? "" : mElt.attributes[Common.SO_TITLE];
   }
   
   double getX() => document.window.innerWidth*mCfg.mOffsetX;
@@ -265,14 +271,14 @@ class Slide {
   * Go to first step of the slide
   */
   void prepareFirstStep() {
-
+    render();
   }
 
   /**
   * Go to last step of the slide
   */
   void prepareLastStep() {
-
+    render();
   }
   
   /**
@@ -281,6 +287,7 @@ class Slide {
   * if the first step has been reached.
   */
   bool prevStep() {
+    render();
     return false;
   }
   
@@ -290,13 +297,22 @@ class Slide {
   * if the last step has been reached.
   */
   bool nextStep() {
+    render();
     return false;
   }
   
   /**
-  * Generate HTML for slide
+  * Setup content for current step
   */
   void render() {
+    // Create header
+    mElt.innerHTML = '<div class="${Common.CLS_SLIDE_HEADER}"><div class="${Common.CLS_SLIDE_TITLE}">${mTitle}</div></div>';
+  }
+  
+  /**
+  * Resize slide
+  */
+  void resize() {
     int h = document.window.innerHeight;
     int w = document.window.innerWidth;
     
@@ -305,5 +321,6 @@ class Slide {
                        + BeamerCSS.transformStyle()
                        + BeamerCSS.translate(getX(), getY(), getZ());
     Common.getLogger().debug("${MSGs.SLIDE_STYLE} #${mSlideNum} \{ ${mElt.style.cssText} \}");
+    render();
   }
 }

@@ -15,17 +15,20 @@
 * This class describes the configuration of a slide.
 */
 class SlideConfig {
+  /** Slide number */
+  int mSlideNum;
   /** Iff true slide numbers are show in presentation */
   bool mShowSlideNum;
+  
   /** Offset of slide compared to the last slide.
    *  offset-x == 1 means the next slide begins where the
    *  last one ends. offset-y == 1 means the next slide is
    *  above the previous. offset-z == 0 means the next slide
    *  lies on the same z-plane as the previous slide.
    */
-  double mOffsetX;
-  double mOffsetY;
-  double mOffsetZ;
+  num mOffsetX;
+  num mOffsetY;
+  num mOffsetZ;
 
   /**
   * Control the animation out of the slide and into the
@@ -40,11 +43,11 @@ class SlideConfig {
     // Use default config
     copyFrom(defaultCfg);
   
-    // Override custom config
+    // Override custom config    
     if (e.attributes[Common.SO_SHOW_SLIDE_NUM] != null) {
       mShowSlideNum = (e.attributes[Common.SO_SHOW_SLIDE_NUM] == Common.TRUE);
     }
-    
+   
     if (e.attributes[Common.SO_OFFSET_X] != null) {
       mOffsetX = Math.parseDouble(e.attributes[Common.SO_OFFSET_X]);
     }
@@ -68,6 +71,7 @@ class SlideConfig {
   copyFrom(SlideConfig cfg)
   {
     if (cfg != null) {
+      mSlideNum = cfg.mSlideNum;
       mShowSlideNum = cfg.mShowSlideNum;
       mOffsetX = cfg.mOffsetX;
       mOffsetY = cfg.mOffsetY;
@@ -75,12 +79,11 @@ class SlideConfig {
       mOutTrans = cfg.mOutTrans;
     }
   }
-
+  
   /**
   * Make position relative to position describe in cfg
   */
-  addPosition(SlideConfig cfg)
-  {
+  addPosition(SlideConfig cfg) {
     mOffsetX += cfg.mOffsetX;
     mOffsetY += cfg.mOffsetY;
     mOffsetZ += cfg.mOffsetZ;
@@ -135,14 +138,18 @@ class SlideContainer {
     mCanvas.query("#${Common.ID_NO_SUPPORT}").remove();
 
     // Setup addition properties of default slide configuration
+    _defCfg.mSlideNum = 0;
     _defCfg.mShowSlideNum = false;
     _defCfg.mOffsetX = 1.0;
     _defCfg.mOffsetY = 0.0;
     _defCfg.mOffsetZ = 0.0;
     _defCfg.mOutTrans = "";
     
+    // Create slide header
+    SlideHeader sH = new SlideHeader();
+    
     // Create slides
-    genSlides(mCanvas.queryAll(".${Common.CLS_SLIDE}"));
+    genSlides(sH, mCanvas.queryAll(".${Common.CLS_SLIDE}"));
     mActiveSlide = 0;
     
     Common.getLogger().debug(MSGs.SLIDECONTAINER_CREATED);
@@ -151,8 +158,8 @@ class SlideContainer {
   /**
   * Create slides from HTML description
   */
-  void genSlides(ElementList slidesElts) {
-    mSlides = new List<Slide>();
+  void genSlides(SlideHeader sH, ElementList slidesElts) {
+    mSlides = new List<Slide>();    
     slidesElts.forEach((Element e) {
       // Config for this slide
       SlideConfig cfg = new SlideConfig(e,_defCfg);
@@ -165,8 +172,10 @@ class SlideContainer {
         // Move according to position of the last slide
         cfg.addPosition(mSlides.last().mCfg);
       }
-      
-      mSlides.addLast(new Slide(e,cfg,mSlides.length));
+      // Set slide number
+      cfg.mSlideNum = mSlides.length + 1;
+      // Add slide to container
+      mSlides.addLast(new Slide(e,cfg,sH));
     });
   }
 
@@ -237,6 +246,66 @@ class SlideContainer {
 }
 
 /**
+* This class describes the header used in slides
+*/
+class SlideHeader {
+  /** Store slide titles*/
+  Map<int,String> mTitles;
+  /** Slide num where section begins*/
+  Map<int,int> mSections;
+  /** Section names*/
+  Map<int,String> mSectionNames;
+  
+  /**
+  * Create slide header from HTML description
+  */
+  SlideHeader() {
+    mTitles = new Map<int,String>();
+    mSections = new Map<int,int>();
+    mSectionNames = new Map<int,String>();
+  }
+  
+  /**
+  * Add next slide to header information
+  */
+  addSlide(int sNum, String title, String sectionName)
+  {
+    // Store title
+    mTitles[sNum] = (title==null) ? "" : title;
+    // Work out what section the slide is in
+    if (sectionName == null) {
+      if (mSections.length > 0)
+      {
+        // Still in same section
+        mSections[sNum] = mSections[sNum-1];
+        mSectionNames[sNum] = mSectionNames[sNum-1];
+      }
+      //else {
+      // No section exists yet and this slide doesn't create one either  
+      //}
+    }
+    else
+    {
+      // Start of new section
+      mSections[sNum] = sNum;
+      mSectionNames[sNum] = sectionName;
+    }
+  }
+  
+  String getHeaderHTML(int sNum) {
+    // Get slide title
+    String title = mTitles[sNum];
+    String sectionName = (mSectionNames.containsKey(sNum)) ? mSectionNames[sNum] : "";
+    int relSectionPos = sNum - ((mSections.containsKey(sNum)) ? mSections[sNum] : 0);
+
+    // Create Header
+    // TODO depending on CSS style change Header information (Title,progressbar,...) 
+    return '<div class="${Common.CLS_SLIDE_HEADER}"><div class="${Common.CLS_SLIDE_TITLE}">${sectionName} - ${title}</div></div>';
+  }
+}
+
+
+/**
 * This class describes a single slide.
 */
 class Slide { 
@@ -245,26 +314,22 @@ class Slide {
   
   /** Configuration of the slide */
   SlideConfig mCfg;
-
-  /** The number of the slide */
-  int mSlideNum;
   
-  /** Slide title */
-  String mTitle;
+  /** Slide header information */
+  SlideHeader mSH;
   
   /**
   * Public Constructor
   */
-  Slide(this.mElt, this.mCfg, this.mSlideNum) {
-    Common.getLogger().debug("${MSGs.SLIDE_CREATED} #${mSlideNum}");
-    
-    // Get title
-    mTitle = (mElt.attributes[Common.SO_TITLE]==null) ? "" : mElt.attributes[Common.SO_TITLE];
+  Slide(this.mElt, this.mCfg, this.mSH) {
+    // Register slide header information
+    mSH.addSlide(mCfg.mSlideNum, mElt.attributes[Common.SO_TITLE],mElt.attributes[Common.SO_SECTION]); 
+    Common.getLogger().debug("${MSGs.SLIDE_CREATED} #${mCfg.mSlideNum}");
   }
   
-  double getX() => document.window.innerWidth*mCfg.mOffsetX;
-  double getY() => document.window.innerHeight*mCfg.mOffsetY;
-  double getZ() => mCfg.mOffsetZ;
+  num getX() => document.window.innerWidth*mCfg.mOffsetX;
+  num getY() => document.window.innerHeight*mCfg.mOffsetY;
+  num getZ() => mCfg.mOffsetZ;
   String getTransition() => mCfg.mOutTrans;
   
   /**
@@ -306,7 +371,7 @@ class Slide {
   */
   void render() {
     // Create header
-    mElt.innerHTML = '<div class="${Common.CLS_SLIDE_HEADER}"><div class="${Common.CLS_SLIDE_TITLE}">${mTitle}</div></div>';
+    mElt.innerHTML = mSH.getHeaderHTML(mCfg.mSlideNum);
   }
   
   /**
@@ -320,7 +385,7 @@ class Slide {
                        + BeamerCSS.transformOrigin(0,0)
                        + BeamerCSS.transformStyle()
                        + BeamerCSS.translate(getX(), getY(), getZ());
-    Common.getLogger().debug("${MSGs.SLIDE_STYLE} #${mSlideNum} \{ ${mElt.style.cssText} \}");
+    Common.getLogger().debug("${MSGs.SLIDE_STYLE} #${mCfg.mSlideNum} \{ ${mElt.style.cssText} \}");
     render();
   }
 }

@@ -36,4 +36,5 @@ class Common {
   static final String SO_OFFSET_Z = "offset-z";
   static final String SO_OUT_ANI = "out-animation";
   static final String SO_TITLE = "title";
+  static final String SO_SECTION = "section";
 }

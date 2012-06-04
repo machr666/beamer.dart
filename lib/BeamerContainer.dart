@@ -18,7 +18,7 @@ class BeamerContainer {
   Element mContainer;
     
   /** Ratio of slides */
-  double mSlideRatio;
+  num mSlideRatio;
  
   /**
   * Create a singleton
@@ -76,10 +76,10 @@ class BeamerContainer {
     }
 
     // Use part of window
-    double ratioScreen = wScreen/hScreen;
+    num ratioScreen = wScreen/hScreen;
     if (ratioScreen < mSlideRatio) {
       // Use full width, just adjust top and bottom padding
-      double padding = (hScreen-wScreen/mSlideRatio)/2;
+      num padding = (hScreen-wScreen/mSlideRatio)/2;
       mContainer.style.marginTop="${padding}px";
       mContainer.style.marginBottom="${padding}px";
       mContainer.style.width="100%";
@@ -88,7 +88,7 @@ class BeamerContainer {
     }
     else {
       // Use full height, just adjust left and right padding
-      double padding = (wScreen-hScreen*mSlideRatio)/2;
+      num padding = (wScreen-hScreen*mSlideRatio)/2;
       mContainer.style.marginLeft="${padding}px";
       mContainer.style.marginRight="${padding}px";
       mContainer.style.height="100%";
